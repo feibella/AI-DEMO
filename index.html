@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI质检战略看板 V3.0 - 支持Excel上传" />
+  <title>AI质检战略看板 V3.0</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+      background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 50%, #eef2ff 100%);
+      color: #1e293b;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .container { max-width: 1280px; margin: 0 auto; padding: 1rem 1.5rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .header-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #4f46e5;
+      color: #fff;
+      font-weight: 700;
+    }
+    h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+    @media (min-width: 640px) { h1 { font-size: 1.5rem; } }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    input[type="file"] { display: none; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary { background: #4f46e5; color: #fff; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35); }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .filters { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+    .filters label { font-size: 0.875rem; color: #64748b; }
+    select, input[type="date"] {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.75rem;
+      background: rgba(255,255,255,0.9);
+      color: #334155;
+    }
+    select:focus, input[type="date"]:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+    .alert { margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.75rem; font-size: 0.875rem; }
+    .alert-warning { background: #fef3c7; color: #92400e; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (min-width: 640px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .cards { grid-template-columns: repeat(4, 1fr); } }
+    .card {
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+      padding: 1.25rem;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 20px 50px -15px rgba(0,0,0,0.12); }
+    .card-title { font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem; }
+    .card-value { font-size: 1.5rem; font-weight: 700; }
+    .card-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 0.125rem; }
+    .card-sparkline { height: 36px; margin-top: 0.5rem; }
+    .card-value.slate { color: #475569; }
+    .card-value.red { color: #dc2626; }
+    .card-value.amber { color: #d97706; }
+    .card-value.indigo { color: #4f46e5; }
+    .card-icon { width: 40px; height: 40px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
+    .card-icon svg { width: 22px; height: 22px; }
+    .card-icon.slate { background: rgba(100, 116, 139, 0.15); color: #475569; }
+    .card-icon.slate svg { stroke: #475569; fill: none; }
+    .card-icon.red { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+    .card-icon.red svg { stroke: #dc2626; fill: #dc2626; }
+    .card-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+    .card-icon.amber svg { stroke: #d97706; fill: #d97706; }
+    .card-icon.indigo { background: rgba(79, 70, 229, 0.12); color: #4f46e5; }
+    .card-icon.indigo svg { stroke: #4f46e5; fill: #4f46e5; }
+    .section {
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .section-head { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(226, 232, 240, 0.8); }
+    .section-head h2 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+    .section-head p { margin: 0.25rem 0 0; font-size: 0.875rem; color: #64748b; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 800px; border-collapse: collapse; }
+    thead { background: rgba(248, 250, 252, 0.9); }
+    th { text-align: left; padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500; color: #475569; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 0.75rem 1rem; font-size: 0.875rem; border-bottom: 1px solid #f1f5f9; }
+    tbody tr:nth-child(even) { background: rgba(248, 250, 252, 0.4); }
+    tbody tr:hover { background: rgba(241, 245, 249, 0.6); }
+    .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    .badge-p0 { background: #fee2e2; color: #b91c1c; }
+    .badge-p1 { background: #fef3c7; color: #b45309; }
+    .badge-pending { background: #f1f5f9; color: #64748b; }
+    .badge-ok { background: #d1fae5; color: #047857; }
+    .badge-fp { background: #fee2e2; color: #b91c1c; }
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      border-radius: 0.75rem;
+      border: none;
+      cursor: pointer;
+      background: #eef2ff;
+      color: #4338ca;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .btn-sm:hover { background: #e0e7ff; }
+    .empty { text-align: center; padding: 3rem 1rem; color: #64748b; }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+    }
+    .overlay.open { display: block; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 51;
+      width: 100%;
+      max-width: 28rem;
+      height: 100%;
+      background: #fff;
+      box-shadow: -10px 0 40px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .drawer-head h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 1rem; }
+    .msg { max-width: 85%; margin-bottom: 0.75rem; }
+    .msg.right { margin-left: auto; }
+    .msg.left { margin-right: auto; }
+    .bubble {
+      padding: 0.5rem 1rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+    }
+    .bubble.teacher { background: #3b82f6; color: #fff; }
+    .bubble.student { background: #e2e8f0; color: #1e293b; }
+    .bubble.highlight { box-shadow: 0 0 0 2px #ef4444; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+    .bubble-meta { font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem; }
+    .ai-tip { margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.75rem; background: #fef3c7; border: 1px solid #fcd34d; font-size: 0.75rem; color: #92400e; }
+    .drawer-foot {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+    .drawer-foot .summary { padding: 0.75rem; background: #fff; border-radius: 0.75rem; font-size: 0.875rem; color: #475569; margin-bottom: 0.75rem; }
+    .drawer-foot input[type="text"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .drawer-foot .actions { display: flex; gap: 0.75rem; }
+    .drawer-foot .btn { flex: 1; justify-content: center; }
+    .btn-close { background: transparent; color: #64748b; padding: 0.25rem; }
+    .btn-close:hover { background: #f1f5f9; color: #1e293b; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-success:hover { background: #047857; }
+    .btn-secondary { background: #475569; color: #fff; }
+    .btn-secondary:hover { background: #334155; }
+    .charts-row { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    @media (min-width: 1024px) { .charts-row { grid-template-columns: 1.2fr 1fr; } }
+    .chart-panel {
+      border-radius: 1rem; border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); padding: 1rem 1.25rem;
+    }
+    .chart-panel h3 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; color: #1e293b; }
+    .chart-panel .chart-desc { font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem; }
+    .chart-wrap { width: 100%; }
+    .chart-wrap.bar-chart { height: 260px; }
+    .chart-wrap.radar-chart { height: 240px; }
+    .chart-wrap.pie-chart { height: 240px; position: relative; }
+    .pie-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: 700; color: #475569; pointer-events: none; }
+    .charts-second-row { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    @media (min-width: 768px) { .charts-second-row { grid-template-columns: 1fr 1fr; } }
+    .radar-legend { display: flex; gap: 0.75rem; margin-top: 0.5rem; font-size: 0.75rem; }
+    .radar-legend span { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .radar-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .radar-legend .dot-team { background: #94a3b8; }
+    .radar-legend .dot-advisor { background: #4f46e5; }
+    .bar-legend { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.75rem; }
+    .bar-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .bar-legend .leg-box { width: 12px; height: 12px; border-radius: 2px; }
+    .bar-legend .leg-p0 { background: #ef4444; }
+    .bar-legend .leg-p1 { background: #f59e0b; }
+    .employee-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .employee-chips .chip { padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 0.5rem; cursor: pointer; background: #f1f5f9; color: #64748b; border: none; }
+    .employee-chips .chip:hover { background: #e2e8f0; }
+    .employee-chips .chip.active { background: #eef2ff; color: #4f46e5; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-inner">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="logo">📊</span>
+        <h1>AI质检战略看板 V3.0</h1>
+      </div>
+      <div class="toolbar">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" />
+        <button type="button" class="btn btn-primary" id="uploadBtn">上传昨日沟通记录 (Excel)</button>
+        <div class="filters">
+          <input type="date" id="dateStart" />
+          <span>至</span>
+          <input type="date" id="dateEnd" />
+          <select id="filterDept">
+            <option value="">全部学部</option>
+          </select>
+          <select id="filterEmp">
+            <option value="">全部员工</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="uploadError" class="container alert alert-warning" style="display: none;"></div>
+  </header>
+
+  <main class="container">
+    <section class="cards">
+      <div class="card">
+        <div class="card-icon slate"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+        <div class="card-title">总会话数</div>
+        <div class="card-value slate" id="metricTotal">0</div>
+        <div class="card-sub" id="cardSub1">Total Conversations</div>
+        <div class="card-sparkline"><svg width="100%" height="36" viewBox="0 0 120 36" preserveAspectRatio="none"><defs><linearGradient id="sparkGrad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs><path d="M0,18 Q15,8 30,18 T60,18 T90,22 T120,14 L120,36 L0,36 Z" fill="url(#sparkGrad1)"/><path d="M0,18 Q15,8 30,18 T60,18 T90,22 T120,14" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-opacity="0.7"/></svg></div>
+      </div>
+      <div class="card">
+        <div class="card-icon red"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke="#fff" fill="none"/></svg></div>
+        <div class="card-title">P0 风险数</div>
+        <div class="card-value red" id="metricP0">0</div>
+        <div class="card-sub" id="cardSub2">Critical P0</div>
+        <div class="card-sparkline"><svg width="100%" height="36" viewBox="0 0 120 36" preserveAspectRatio="none"><defs><linearGradient id="sparkGrad2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs><path d="M0,20 Q20,28 40,20 T80,24 T120,18 L120,36 L0,36 Z" fill="url(#sparkGrad2)"/><path d="M0,20 Q20,28 40,20 T80,24 T120,18" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-opacity="0.7"/></svg></div>
+      </div>
+      <div class="card">
+        <div class="card-icon amber"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+        <div class="card-title">P1 风险数</div>
+        <div class="card-value amber" id="metricP1">0</div>
+        <div class="card-sub" id="cardSub3">Warning P1</div>
+        <div class="card-sparkline"><svg width="100%" height="36" viewBox="0 0 120 36" preserveAspectRatio="none"><defs><linearGradient id="sparkGrad3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs><path d="M0,22 Q30,12 60,22 T120,16 L120,36 L0,36 Z" fill="url(#sparkGrad3)"/><path d="M0,22 Q30,12 60,22 T120,16" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-opacity="0.7"/></svg></div>
+      </div>
+      <div class="card">
+        <div class="card-icon indigo"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+        <div class="card-title">AI 准确率</div>
+        <div class="card-value indigo" id="metricAccuracy">暂无</div>
+        <div class="card-sub" id="cardSub4">闭环率 0%</div>
+        <div class="card-sparkline"><svg width="100%" height="36" viewBox="0 0 120 36" preserveAspectRatio="none"><defs><linearGradient id="sparkGrad4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs><path d="M0,18 Q30,8 60,18 T120,12 L120,36 L0,36 Z" fill="url(#sparkGrad4)"/><path d="M0,18 Q30,8 60,18 T120,12" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-opacity="0.7"/></svg></div>
+      </div>
+    </section>
+
+    <section class="charts-row">
+      <div class="chart-panel">
+        <h3>学部-业务团队 P0/P1 堆叠</h3>
+        <p class="chart-desc" id="barChartDesc">点击柱子下钻</p>
+        <div id="barChartWrap" class="chart-wrap bar-chart"></div>
+        <div class="bar-legend"><span><i class="leg-box leg-p0"></i>P0 高危</span><span><i class="leg-box leg-p1"></i>P1 服务风险</span></div>
+      </div>
+      <div class="charts-second-row">
+        <div class="chart-panel">
+          <h3>顾问 vs 团队 雷达</h3>
+          <p class="chart-desc">选择员工后展示偏差，维度：退费/客诉/负面情绪/服务态度/响应效率</p>
+          <div id="radarChartWrap" class="chart-wrap radar-chart"></div>
+          <div class="radar-legend"><span><i class="dot dot-team"></i>团队平均</span><span><i class="dot dot-advisor"></i>当前顾问</span></div>
+          <div class="employee-chips" id="employeeChips"></div>
+        </div>
+        <div class="chart-panel">
+          <h3>风险类型分布</h3>
+          <p class="chart-desc">中心为当前总风险数，点击扇区筛选列表</p>
+          <div id="pieChartWrap" class="chart-wrap pie-chart">
+            <span id="pieCenterNum" class="pie-center">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>风险会话明细 (溯源)</h2>
+        <p>DateRange / 学部 / 员工 与图表联动</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>学部</th>
+              <th>员工</th>
+              <th>学员编号</th>
+              <th>发生时间</th>
+              <th>风险等级</th>
+              <th>AI质检结论</th>
+              <th>校验状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div>
+        <h3 id="drawerTitle">—</h3>
+        <p style="margin: 0.25rem 0 0; font-size: 0.875rem; color: #64748b;" id="drawerSub">—</p>
+      </div>
+      <button type="button" class="btn btn-close" id="drawerClose">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-foot">
+      <div class="summary" id="drawerSummary">—</div>
+      <input type="text" id="reviewComment" placeholder="请填写纠偏理由(选填)..." />
+      <div class="actions">
+        <button type="button" class="btn btn-success" id="btnAccurate">确认违规</button>
+        <button type="button" class="btn btn-secondary" id="btnFalsePositive">标记误报</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script>
+(function () {
+  'use strict';
+
+  function normalizeDateStr(t) {
+    if (t == null || t === '') return '';
+    if (typeof t === 'object' && t instanceof Date && !Number.isNaN(t.getTime()))
+      return t.toISOString().slice(0, 10);
+    var s = String(t).trim();
+    if (!s) return '';
+    var num = Number(t);
+    if (!Number.isNaN(num) && num > 0) {
+      var date = new Date((num - 25569) * 86400 * 1000);
+      if (!Number.isNaN(date.getTime())) {
+        var y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+      }
+    }
+    var match = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (match) return match[1] + '-' + match[2].padStart(2, '0') + '-' + match[3].padStart(2, '0');
+    if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
+    return '';
+  }
+
+  var NOISE = [
+    function(c) { return /https?:\/\//i.test(String(c)); },
+    function(c) { return String(c).trim().indexOf('!!') === 0; },
+    function(c) { var x = String(c).trim(); return /^\[表情\]$/i.test(x) || /^\[.*表情.*\]$/i.test(x); }
+  ];
+  function cleanData(msgs) {
+    if (!Array.isArray(msgs)) return [];
+    return msgs.filter(function(m) {
+      var c = m.content != null ? String(m.content).trim() : '';
+      if (!c) return false;
+      return !NOISE.some(function(fn) { return fn(c); });
+    });
+  }
+
+  var P0_KW = ['退钱', '投诉', '12315', '骗子', '维权', '必须退', '马上退', '立刻退'];
+  var P0_QUERY = ['退费流程', '怎么退', '如何退', '能否退'];
+  var P1_KW = ['没办法', '呵呵', '随便', '自己看', '您要非这么想', '那我也没办法'];
+  var CONFIRM = /对吧|好的|嗯|嗯嗯|收到|好哒|好的呢/;
+
+  function isStudent(dir) { return String(dir).indexOf('学生') !== -1; }
+  function isTeacherDir(dir) { return String(dir).indexOf('老师') !== -1; }
+
+  function analyzeSession(messages) {
+    var cleaned = cleanData(messages);
+    var riskLevel = 'None', riskTags = [], aiSummary = '无风险会话', reasoning = '', highlightIds = [];
+    var i, content, onlyQuery, hasDemand, teacherShortCount, msg, k, isShort;
+
+    var teacherReplies = cleaned.filter(function(m) { return isTeacherDir(m.direction); });
+    if (teacherReplies.length) {
+      var allShort = teacherReplies.every(function(m) {
+        var c = String(m.content || '').trim();
+        return c.length < 10 && CONFIRM.test(c);
+      });
+      if (allShort) return { riskLevel: 'None', riskTags: [], aiSummary: '无效对话（无风险）', reasoning: '预过滤：对话中老师回复均为简短确认用语，无实质性业务讨论，判定为无效对话（无风险）。', highlightIds: [] };
+    }
+
+    for (i = 0; i < cleaned.length; i++) {
+      msg = cleaned[i];
+      if (!isStudent(msg.direction)) continue;
+      content = String(msg.content || '');
+      onlyQuery = P0_QUERY.some(function(kw) { return content.indexOf(kw) !== -1; }) && !P0_KW.some(function(kw) { return content.indexOf(kw) !== -1; });
+      if (onlyQuery) continue;
+      hasDemand = P0_KW.some(function(kw) { return content.indexOf(kw) !== -1; }) || (content.indexOf('退费') !== -1 && !/流程|怎么|如何|能否/.test(content));
+      if (hasDemand) {
+        riskLevel = 'P0'; riskTags.push('退费/投诉'); highlightIds.push(msg.id);
+        aiSummary = '客户情绪激动，提及退费/投诉，需立即介入！';
+        reasoning = 'P0 判定：学员消息「' + msg.id + '」中显式表达退款/投诉/维权意愿，非单纯流程咨询。';
+        break;
+      }
+    }
+
+    if (riskLevel === 'None') {
+      teacherShortCount = 0;
+      for (i = 0; i < cleaned.length; i++) {
+        msg = cleaned[i];
+        if (!isTeacherDir(msg.direction)) { teacherShortCount = 0; continue; }
+        content = String(msg.content || '').trim();
+        if (content.length < 10 && CONFIRM.test(content)) { teacherShortCount = 0; continue; }
+        isShort = content.length <= 2 || /^[\u{1F300}-\u{1F9FF}]|[\u2600-\u26FF]|[\u2700-\u27BF]$/u.test(content);
+        if (isShort) {
+          teacherShortCount++;
+          if (teacherShortCount >= 2) {
+            riskLevel = 'P1'; riskTags.push('已读乱回'); highlightIds.push(msg.id);
+            aiSummary = '顾问在学员提出具体问题后连续使用敷衍/短句回复，存在已读乱回风险。';
+            reasoning = 'P1 判定：老师消息「' + msg.id + '」在业务问题后连续出现极短回复，构成实质性搁置。';
+            break;
+          }
+        } else {
+          teacherShortCount = 0;
+          for (k = 0; k < P1_KW.length; k++) {
+            if (content.indexOf(P1_KW[k]) !== -1) {
+              riskLevel = 'P1'; riskTags.push('阴阳怪气'); highlightIds.push(msg.id);
+              aiSummary = '顾问语气生硬或敷衍，存在阴阳怪气/推卸责任风险。';
+              reasoning = 'P1 判定：老师消息「' + msg.id + '」中出现「' + P1_KW[k] + '」等讽刺/推卸表述，导致学员问题被搁置或情绪恶化。';
+              break;
+            }
+          }
+          if (riskLevel === 'P1') break;
+        }
+      }
+    }
+    if (!reasoning) reasoning = '语境分析后未发现 P0/P1 触发条件，判定为无风险。';
+    return { riskLevel: riskLevel, riskTags: riskTags, aiSummary: aiSummary, reasoning: reasoning, highlightIds: highlightIds };
+  }
+
+  function getRiskType(riskLevel, riskTags) {
+    if (riskLevel === 'P0') return '退费';
+    if (riskLevel !== 'P1') return null;
+    return riskTags && riskTags.some(function(t) { return t === '敷衍回复' || t === '已读乱回'; }) ? '已读乱回' : '阴阳怪气';
+  }
+
+  var defaultSessions = [
+    { id: 'S-001', department: '心理学部', employee: '汤冉冉', studentId: '4662561480', lastTime: '2026-03-16 15:30:03', riskLevel: 'P0', riskTags: ['退费危机'], riskType: '退费', aiSummary: '学员明确提出想要退费，顾问未安抚情绪，触发P0高危。', reasoning: 'P0 判定：学员消息「m4」中显式表达退钱/12315投诉等维权意愿。', highlightIds: ['m4'], reviewStatus: 'pending', reviewComment: '', status: 'open', chatHistory: [
+      { id: 'm1', time: '15:27:18', direction: '老师->学生', content: '冉冉老师刚收到了你的作业' },
+      { id: 'm2', time: '15:28:00', direction: '学生->老师', content: '老师，我想了解一下退费流程。' },
+      { id: 'm3', time: '15:29:10', direction: '老师->学生', content: '你觉得没帮助我也没办法，退费自己去后台看规则。' },
+      { id: 'm4', time: '15:30:03', direction: '学生->老师', content: '立刻给我退钱，不然我去12315投诉！' }
+    ]},
+    { id: 'S-002', department: '公职学部', employee: '陈宁07', studentId: '6961873872', lastTime: '2026-03-16 12:48:17', riskLevel: 'P1', riskTags: ['语气生硬'], riskType: '阴阳怪气', aiSummary: "销售回复敷衍，带有'呵呵'等引发负面情绪的词汇。", reasoning: 'P1 判定：老师消息「m2」中出现阴阳怪气表述。', highlightIds: ['m2'], reviewStatus: 'accurate', reviewComment: '确实阴阳怪气', status: 'closed', chatHistory: [
+      { id: 'm1', time: '12:41:45', direction: '学生->老师', content: '老师，这个知识点我还是没听懂，能再讲一下吗？' },
+      { id: 'm2', time: '12:42:50', direction: '老师->学生', content: '课上都讲过了，自己多看几遍回放吧呵呵。' }
+    ]}
+  ];
+
+  function parseExcelToSessions(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, { type: 'array' });
+        var sh = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sh, { header: 1 });
+        if (!rows.length) { cb([]); return; }
+        var headers = rows[0].map(function(h) { return String(h || '').trim(); });
+        var col = function(name) { var i = headers.indexOf(name); return i >= 0 ? i : -1; };
+        var idxDept = col('学部'), idxEmp = col('员工'), idxUser = col('用户编号'), idxTime = col('沟通时间'), idxType = col('沟通发送类型'), idxContent = col('内容');
+        if (idxDept < 0 || idxEmp < 0 || idxUser < 0 || idxTime < 0 || idxType < 0 || idxContent < 0) {
+          cb(null, new Error('Excel 表头需包含：学部, 员工, 用户编号, 沟通时间, 沟通发送类型, 内容'));
+          return;
+        }
+        var raw = [];
+        for (var i = 1; i < rows.length; i++) {
+          var r = rows[i];
+          if (!r || r.length === 0) continue;
+          raw.push({ 学部: r[idxDept] != null ? String(r[idxDept]).trim() : '', 员工: r[idxEmp] != null ? String(r[idxEmp]).trim() : '', 用户编号: r[idxUser] != null ? String(r[idxUser]).trim() : '', 沟通时间: r[idxTime] != null ? String(r[idxTime]).trim() : '', 沟通发送类型: r[idxType] != null ? String(r[idxType]).trim() : '', 内容: r[idxContent] != null ? String(r[idxContent]).trim() : '' });
+        }
+        var groups = {};
+        raw.forEach(function(r) { var key = r.学部 + '_' + r.员工 + '_' + r.用户编号; if (!groups[key]) groups[key] = []; groups[key].push(r); });
+        var sessions = [];
+        var sessionIndex = 0;
+        Object.keys(groups).forEach(function(key) {
+          var list = groups[key];
+          list.sort(function(a, b) { return (a.沟通时间 || '').localeCompare(b.沟通时间 || ''); });
+          var parts = key.split('_');
+          var 学部 = parts[0] || '', 员工 = parts[1] || '', 用户编号 = parts[2] || '';
+          var lastRow = list[list.length - 1];
+          var chatHistory = list.map(function(r, i) { return { id: 'm' + (i + 1), time: r.沟通时间, direction: r.沟通发送类型 || '未知', content: r.内容 }; });
+          var analysis = analyzeSession(chatHistory);
+          var riskType = getRiskType(analysis.riskLevel, analysis.riskTags);
+          sessionIndex++;
+          sessions.push({
+            id: 'S-' + String(sessionIndex).padStart(3, '0'),
+            department: 学部, employee: 员工, studentId: 用户编号, lastTime: lastRow.沟通时间,
+            riskLevel: analysis.riskLevel, riskTags: analysis.riskTags, riskType: riskType || '其他',
+            aiSummary: analysis.aiSummary, reasoning: analysis.reasoning || '', highlightIds: analysis.highlightIds || [],
+            reviewStatus: 'pending', reviewComment: '', status: 'open', chatHistory: chatHistory
+          });
+        });
+        cb(sessions);
+      } catch (err) { cb(null, err); }
+    };
+    reader.onerror = function() { cb(null, reader.error); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  var state = { sessions: defaultSessions.slice(), dateStart: '2026-03-16', dateEnd: '2026-03-17', filterDept: '', filterEmp: '', filterRiskType: '', detailSession: null, reviewComment: '' };
+
+  function getFiltered() {
+    return state.sessions.filter(function(s) {
+      if (state.filterDept && s.department !== state.filterDept) return false;
+      if (state.filterEmp && s.employee !== state.filterEmp) return false;
+      var d = normalizeDateStr(s.lastTime);
+      if (d && (d < state.dateStart || d > state.dateEnd)) return false;
+      return true;
+    });
+  }
+  function getRiskList() {
+    var list = getFiltered().filter(function(s) { return s.riskLevel === 'P0' || s.riskLevel === 'P1'; });
+    if (state.filterRiskType) list = list.filter(function(s) { return (s.riskType || '其他') === state.filterRiskType; });
+    return list;
+  }
+  function getMetrics() {
+    var list = getFiltered(), total = list.length, p0 = list.filter(function(s) { return s.riskLevel === 'P0'; }).length, p1 = list.filter(function(s) { return s.riskLevel === 'P1'; }).length, riskTotal = p0 + p1, accurate = list.filter(function(s) { return (s.riskLevel === 'P0' || s.riskLevel === 'P1') && s.reviewStatus === 'accurate'; }).length;
+    return { total: total, p0: p0, p1: p1, accuracy: riskTotal > 0 ? Math.round((accurate / riskTotal) * 100) : null };
+  }
+
+  function escapeHtml(str) { if (str == null) return ''; var s = String(str); return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  var PIE_COLORS = { '退费': '#ef4444', '阴阳怪气': '#f59e0b', '已读乱回': '#8b5cf6', '其他': '#64748b' };
+  var RADAR_LABELS = ['退费', '客诉', '负面情绪', '服务态度', '响应效率'];
+
+  function getBarData() {
+    var risks = getFiltered().filter(function(s) { return s.riskLevel === 'P0' || s.riskLevel === 'P1'; });
+    var byDept = {};
+    risks.forEach(function(s) {
+      var name = s.department || '未分类';
+      if (!byDept[name]) byDept[name] = { name: name, P0: 0, P1: 0 };
+      if (s.riskLevel === 'P0') byDept[name].P0 += 1; else byDept[name].P1 += 1;
+    });
+    return Object.keys(byDept).sort().map(function(k) { return byDept[k]; });
+  }
+
+  function getPieData() {
+    var risks = getFiltered().filter(function(s) { return s.riskLevel === 'P0' || s.riskLevel === 'P1'; });
+    var byType = {};
+    risks.forEach(function(s) {
+      var t = s.riskType || '其他';
+      byType[t] = (byType[t] || 0) + 1;
+    });
+    return Object.keys(byType).map(function(k) { return { name: k, value: byType[k] }; });
+  }
+
+  function getRadarData() {
+    var risks = getFiltered().filter(function(s) { return s.riskLevel === 'P0' || s.riskLevel === 'P1'; });
+    var team = [0,0,0,0,0], advisor = [0,0,0,0,0];
+    var teamN = 0, advisorN = 0;
+    var emp = state.filterEmp || (risks[0] && risks[0].employee);
+    risks.forEach(function(s) {
+      var v0 = (s.riskType === '退费') ? 80 : 20;
+      var v1 = (s.riskTags && s.riskTags.join('').indexOf('投诉') !== -1) ? 75 : 25;
+      var v2 = (s.riskType === '阴阳怪气' || s.riskType === '已读乱回') ? 70 : 30;
+      var v3 = (s.riskTags && s.riskTags.join('').indexOf('态度') !== -1) ? 60 : 40;
+      var v4 = 50;
+      team[0]+=v0;team[1]+=v1;team[2]+=v2;team[3]+=v3;team[4]+=v4;
+      teamN++;
+      if (s.employee === emp) { advisor[0]+=v0;advisor[1]+=v1;advisor[2]+=v2;advisor[3]+=v3;advisor[4]+=v4; advisorN++; }
+    });
+    var i;
+    for (i = 0; i < 5; i++) team[i] = teamN ? Math.round(team[i] / teamN) : 50;
+    for (i = 0; i < 5; i++) advisor[i] = advisorN ? Math.round(advisor[i] / advisorN) : team[i];
+    return { team: team, advisor: advisor };
+  }
+
+  function renderCharts() {
+    var barData = getBarData();
+    var wrap = document.getElementById('barChartWrap');
+    if (wrap) {
+      var maxVal = 0;
+      barData.forEach(function(d) { var t = d.P0 + d.P1; if (t > maxVal) maxVal = t; });
+      if (maxVal === 0) maxVal = 1;
+      var yMax = maxVal === 0 ? 1 : (maxVal <= 4 ? 4 : (maxVal <= 10 ? Math.ceil(maxVal / 2) * 2 : Math.ceil(maxVal / 5) * 5));
+      var yStep = yMax <= 5 ? 1 : (yMax <= 10 ? 2 : 5);
+      var w = 500, h = 240;
+      var pad = { top: 16, right: 20, bottom: 44, left: 36 };
+      var chartW = w - pad.left - pad.right, chartH = h - pad.top - pad.bottom;
+      var barW = barData.length ? Math.max(18, (chartW / barData.length) * 0.65) : 24;
+      var scale = chartH / yMax;
+      var axisColor = '#cbd5e1';
+      var svg = '<svg width="100%" height="240" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet">';
+      svg += '<g font-size="11" fill="#64748b">';
+      svg += '<line x1="' + pad.left + '" y1="' + pad.top + '" x2="' + pad.left + '" y2="' + (pad.top + chartH) + '" stroke="' + axisColor + '" stroke-width="1"/>';
+      svg += '<line x1="' + pad.left + '" y1="' + (pad.top + chartH) + '" x2="' + (pad.left + chartW) + '" y2="' + (pad.top + chartH) + '" stroke="' + axisColor + '" stroke-width="1"/>';
+      for (var tick = 0; tick <= yMax; tick += yStep) {
+        var y = pad.top + chartH - (tick / yMax) * chartH;
+        svg += '<line x1="' + pad.left + '" y1="' + y + '" x2="' + (pad.left - 5) + '" y2="' + y + '" stroke="' + axisColor + '" stroke-width="1"/>';
+        svg += '<text x="' + (pad.left - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#64748b">' + tick + '</text>';
+      }
+      barData.forEach(function(d, i) {
+        var x = pad.left + (i + 0.5) * (chartW / (barData.length || 1)) - barW / 2;
+        var p0h = (d.P0 / yMax) * chartH, p1h = (d.P1 / yMax) * chartH;
+        var y1 = pad.top + chartH - p0h;
+        var y2 = y1 - p1h;
+        svg += '<g data-dept="' + escapeHtml(d.name) + '" style="cursor:pointer">';
+        svg += '<rect x="' + x + '" y="' + y1 + '" width="' + barW + '" height="' + Math.max(0, p0h) + '" fill="#ef4444" rx="2"/>';
+        svg += '<rect x="' + x + '" y="' + y2 + '" width="' + barW + '" height="' + Math.max(0, p1h) + '" fill="#f59e0b" rx="2"/>';
+        svg += '<text x="' + (x + barW/2) + '" y="' + (pad.top + chartH + 18) + '" text-anchor="middle" font-size="10">' + escapeHtml(d.name) + '</text>';
+        svg += '</g>';
+      });
+      svg += '<text x="' + (pad.left - 12) + '" y="' + (pad.top + chartH/2) + '" text-anchor="middle" transform="rotate(-90,' + (pad.left - 12) + ',' + (pad.top + chartH/2) + ')" font-size="10" fill="#64748b">数量</text>';
+      svg += '</g></svg>';
+      wrap.innerHTML = svg;
+    }
+    var barWrap = document.getElementById('barChartWrap');
+    if (barWrap && !barWrap._barClickBound) {
+      barWrap._barClickBound = true;
+      barWrap.addEventListener('click', function(e) {
+        var g = e.target.closest && e.target.closest('g[data-dept]');
+        if (!g) return;
+        var dept = g.getAttribute('data-dept');
+        state.filterDept = state.filterDept === dept ? '' : dept;
+        state.filterEmp = '';
+        updateFilters();
+        render();
+      });
+    }
+
+    var pieData = getPieData();
+    var totalRisk = pieData.reduce(function(s, d) { return s + d.value; }, 0);
+    var pieWrap = document.getElementById('pieChartWrap');
+    if (pieWrap) {
+      if (pieData.length && totalRisk >= 1) {
+        var size = 200, cx = size/2, cy = size/2, r = 70, ir = 44;
+        var sum = totalRisk || 1;
+        var path = [];
+        var pathFills = [];
+        if (pieData.length === 1 && totalRisk === 1) {
+          var typeName = pieData[0].name;
+          var fill = PIE_COLORS[typeName] || PIE_COLORS['其他'];
+          var topO = cx + ',' + (cy - r), botO = cx + ',' + (cy + r), topI = cx + ',' + (cy - ir), botI = cx + ',' + (cy + ir);
+          var fullRing = 'M' + topO + ' A' + r + ',' + r + ' 0 0 1 ' + botO + ' A' + r + ',' + r + ' 0 0 1 ' + topO + ' L' + topI + ' A' + ir + ',' + ir + ' 0 0 0 ' + botI + ' A' + ir + ',' + ir + ' 0 0 0 ' + topI + ' Z';
+          path.push(fullRing);
+          pathFills.push({ name: typeName, fill: fill });
+        } else {
+          var acc = 0;
+          pieData.forEach(function(d) {
+            var ratio = d.value / sum;
+            var a0 = acc * 2 * Math.PI - Math.PI / 2;
+            acc += ratio;
+            var a1 = acc * 2 * Math.PI - Math.PI / 2;
+            var x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+            var x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+            var x2 = cx + ir * Math.cos(a1), y2 = cy + ir * Math.sin(a1);
+            var x3 = cx + ir * Math.cos(a0), y3 = cy + ir * Math.sin(a0);
+            path.push('M' + x0 + ',' + y0 + ' A' + r + ',' + r + ' 0 0 1 ' + x1 + ',' + y1 + ' L' + x2 + ',' + y2 + ' A' + ir + ',' + ir + ' 0 0 0 ' + x3 + ',' + y3 + ' Z');
+            pathFills.push({ name: d.name, fill: PIE_COLORS[d.name] || PIE_COLORS['其他'] });
+          });
+        }
+        var svg = '<svg width="100%" height="240" viewBox="0 0 ' + size + ' ' + size + '" preserveAspectRatio="xMidYMid meet">';
+        path.forEach(function(p, i) {
+          var typeName = pathFills[i].name;
+          var fill = pathFills[i].fill;
+          svg += '<path class="pie-segment" data-type="' + escapeHtml(typeName) + '" d="' + p + '" fill="' + fill + '" stroke="#fff" stroke-width="2" style="cursor:pointer"/>';
+        });
+        svg += '</svg>';
+        pieWrap.innerHTML = svg + '<span id="pieCenterNum" class="pie-center">' + totalRisk + '</span>';
+      } else {
+        pieWrap.innerHTML = '<span id="pieCenterNum" class="pie-center">0</span>';
+      }
+    }
+
+    var radar = getRadarData();
+    var rWrap = document.getElementById('radarChartWrap');
+    if (rWrap) {
+      var size = 220, cx = size/2, cy = size/2, maxR = 85;
+      var points = function(arr) {
+        return arr.map(function(v, i) {
+          var a = (i / 5) * 2 * Math.PI - Math.PI / 2;
+          var r = (v / 100) * maxR;
+          return (cx + r * Math.cos(a)) + ',' + (cy + r * Math.sin(a));
+        }).join(' ');
+      };
+      var grid = '';
+      for (var g = 1; g <= 5; g++) {
+        var rr = (g / 5) * maxR;
+        var pts = RADAR_LABELS.map(function(_, i) {
+          var a = (i / 5) * 2 * Math.PI - Math.PI / 2;
+          return (cx + rr * Math.cos(a)) + ',' + (cy + rr * Math.sin(a));
+        }).join(' ');
+        grid += '<polygon points="' + pts + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+      }
+      RADAR_LABELS.forEach(function(lab, i) {
+        var a = (i / 5) * 2 * Math.PI - Math.PI / 2;
+        var x = cx + (maxR + 14) * Math.cos(a), y = cy + (maxR + 14) * Math.sin(a);
+        grid += '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="10" fill="#64748b">' + lab + '</text>';
+      });
+      var teamP = points(radar.team), advP = points(radar.advisor);
+      var svg = '<svg width="100%" height="240" viewBox="0 0 ' + size + ' ' + size + '" preserveAspectRatio="xMidYMid meet">' + grid +
+        '<polygon points="' + teamP + '" fill="#94a3b8" fill-opacity="0.25" stroke="#94a3b8" stroke-width="1.5"/>' +
+        '<polygon points="' + advP + '" fill="#4f46e5" fill-opacity="0.35" stroke="#4f46e5" stroke-width="1.5"/>' +
+        '</svg>';
+      rWrap.innerHTML = svg;
+    }
+  }
+
+  function render() {
+    var metrics = getMetrics();
+    document.getElementById('metricTotal').textContent = metrics.total;
+    document.getElementById('metricP0').textContent = metrics.p0;
+    document.getElementById('metricP1').textContent = metrics.p1;
+    document.getElementById('metricAccuracy').textContent = metrics.accuracy != null ? metrics.accuracy + '%' : '暂无';
+    var sub4 = document.getElementById('cardSub4');
+    if (sub4) sub4.textContent = '闭环率 ' + (metrics.accuracy != null ? metrics.accuracy + '%' : '0%');
+
+    var barDesc = document.getElementById('barChartDesc');
+    if (barDesc) barDesc.textContent = state.filterDept ? '点击柱子下钻 当前：' + state.filterDept : '点击柱子下钻';
+
+    renderCharts();
+
+    var risksForChips = getFiltered().filter(function(s) { return s.riskLevel === 'P0' || s.riskLevel === 'P1'; });
+    var empSet = {};
+    risksForChips.forEach(function(s) { if (s.employee) empSet[s.employee] = true; });
+    var empList = Object.keys(empSet).sort();
+    var chipsEl = document.getElementById('employeeChips');
+    if (chipsEl) {
+      chipsEl.innerHTML = empList.map(function(emp) {
+        var active = state.filterEmp === emp ? ' active' : '';
+        return '<button type="button" class="chip' + active + '" data-emp="' + escapeHtml(emp) + '">' + escapeHtml(emp) + '</button>';
+      }).join('');
+      chipsEl.querySelectorAll('.chip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          state.filterEmp = btn.getAttribute('data-emp');
+          updateFilters();
+          render();
+        });
+      });
+    }
+
+    var risks = getRiskList();
+    var tbody = document.getElementById('tableBody');
+    if (!risks.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">当前筛选下暂无风险会话</td></tr>'; return; }
+    tbody.innerHTML = risks.map(function(s) {
+      var statusText = s.reviewStatus === 'accurate' ? '✅ 准确' : s.reviewStatus === 'false_positive' ? '❌ 误判' : '待校验';
+      var statusClass = s.reviewStatus === 'accurate' ? 'badge-ok' : s.reviewStatus === 'false_positive' ? 'badge-fp' : 'badge-pending';
+      var levelClass = s.riskLevel === 'P0' ? 'badge-p0' : 'badge-p1';
+      return '<tr><td>' + escapeHtml(s.department) + '</td><td>' + escapeHtml(s.employee) + '</td><td><code>' + escapeHtml(s.studentId) + '</code></td><td>' + escapeHtml(s.lastTime) + '</td><td><span class="badge ' + levelClass + '">' + escapeHtml(s.riskLevel) + '</span></td><td>' + escapeHtml(s.aiSummary) + '</td><td><span class="badge ' + statusClass + '">' + statusText + '</span></td><td><button type="button" class="btn-sm" data-id="' + escapeHtml(s.id) + '">查看详情 &gt;</button></td></tr>';
+    }).join('');
+
+    tbody.querySelectorAll('.btn-sm').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-id');
+        var s = state.sessions.find(function(x) { return x.id === id; });
+        if (s) openDrawer(s);
+      });
+    });
+  }
+
+  function openDrawer(s) {
+    state.detailSession = s;
+    state.reviewComment = s.reviewComment || '';
+    document.getElementById('drawerTitle').textContent = s.department + ' · ' + s.employee;
+    document.getElementById('drawerSub').textContent = s.studentId + ' · 风险等级 ' + s.riskLevel;
+    document.getElementById('drawerSummary').textContent = s.aiSummary;
+    document.getElementById('reviewComment').value = state.reviewComment;
+
+    var html = '';
+    (s.chatHistory || []).forEach(function(msg) {
+      var teacherSide = isTeacherDir(msg.direction);
+      var isHighlight = (s.highlightIds || []).indexOf(msg.id) !== -1;
+      var side = teacherSide ? 'right' : 'left';
+      var bubbleClass = 'bubble ' + (teacherSide ? 'teacher' : 'student') + (isHighlight ? ' highlight' : '');
+      html += '<div class="msg ' + side + '"><div class="' + bubbleClass + '"><div class="bubble-meta">' + escapeHtml(msg.time) + ' · ' + escapeHtml(msg.direction) + '</div><div>' + escapeHtml(msg.content) + '</div></div>';
+      if (isHighlight && s.reasoning) html += '<div class="ai-tip">AI 建议：' + escapeHtml(s.reasoning) + '</div>';
+      html += '</div>';
+    });
+    document.getElementById('drawerBody').innerHTML = html;
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+  }
+  function closeDrawer() { document.getElementById('overlay').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); state.detailSession = null; }
+  function handleReview(status) {
+    if (!state.detailSession) return;
+    var id = state.detailSession.id;
+    var comment = document.getElementById('reviewComment').value.trim();
+    state.sessions = state.sessions.map(function(s) {
+      if (s.id !== id) return s;
+      var o = {}; for (var k in s) if (s.hasOwnProperty(k)) o[k] = s[k];
+      o.reviewStatus = status; o.reviewComment = comment; o.status = 'closed';
+      return o;
+    });
+    closeDrawer();
+    render();
+  }
+
+  function fillSelect(id, options, current) { var sel = document.getElementById(id); if (!sel) return; var first = sel.options[0]; sel.innerHTML = ''; if (first) sel.appendChild(first); options.forEach(function(opt) { var o = document.createElement('option'); o.value = opt; o.textContent = opt; if (opt === current) o.selected = true; sel.appendChild(o); }); }
+  function updateFilters() {
+    var list = state.sessions;
+    var depts = Array.from(new Set(list.map(function(s) { return s.department; }).filter(Boolean))).sort();
+    var emps = list.map(function(s) { return s.employee; }).filter(Boolean);
+    if (state.filterDept) emps = list.filter(function(s) { return s.department === state.filterDept; }).map(function(s) { return s.employee; }).filter(Boolean);
+    emps = Array.from(new Set(emps)).sort();
+    fillSelect('filterDept', depts, state.filterDept);
+    fillSelect('filterEmp', emps, state.filterEmp);
+  }
+
+  document.getElementById('uploadBtn').addEventListener('click', function() { document.getElementById('fileInput').click(); });
+  document.getElementById('fileInput').addEventListener('change', function() {
+    var file = this.files[0];
+    this.value = '';
+    document.getElementById('uploadError').style.display = 'none';
+    if (!file) return;
+    var el = document.getElementById('uploadBtn');
+    el.disabled = true;
+    el.textContent = '解析中...';
+    parseExcelToSessions(file, function(sessions, err) {
+      el.disabled = false;
+      el.textContent = '上传昨日沟通记录 (Excel)';
+      if (err) { document.getElementById('uploadError').className = 'container alert alert-warning'; document.getElementById('uploadError').textContent = err.message || '解析失败'; document.getElementById('uploadError').style.display = 'block'; return; }
+      if (sessions && sessions.length > 0) {
+        state.sessions = sessions;
+        var dates = sessions.map(function(s) { return normalizeDateStr(s.lastTime); }).filter(Boolean);
+        if (dates.length > 0) { dates.sort(); state.dateStart = dates[0]; state.dateEnd = dates[dates.length - 1]; document.getElementById('dateStart').value = state.dateStart; document.getElementById('dateEnd').value = state.dateEnd; }
+      } else { state.sessions = defaultSessions.slice(); document.getElementById('uploadError').className = 'container alert alert-warning'; document.getElementById('uploadError').textContent = '未解析到有效数据，已恢复默认示例。'; document.getElementById('uploadError').style.display = 'block'; }
+      updateFilters();
+      render();
+    });
+  });
+
+  document.getElementById('dateStart').value = state.dateStart;
+  document.getElementById('dateEnd').value = state.dateEnd;
+  document.getElementById('dateStart').addEventListener('change', function() { state.dateStart = this.value; render(); });
+  document.getElementById('dateEnd').addEventListener('change', function() { state.dateEnd = this.value; render(); });
+  document.getElementById('filterDept').addEventListener('change', function() { state.filterDept = this.value; state.filterEmp = ''; updateFilters(); render(); });
+  document.getElementById('filterEmp').addEventListener('change', function() { state.filterEmp = this.value; render(); });
+  document.getElementById('overlay').addEventListener('click', closeDrawer);
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  document.getElementById('btnAccurate').addEventListener('click', function() { handleReview('accurate'); });
+  document.getElementById('btnFalsePositive').addEventListener('click', function() { handleReview('false_positive'); });
+
+  var pieWrapEl = document.getElementById('pieChartWrap');
+  if (pieWrapEl && !pieWrapEl._pieClickBound) {
+    pieWrapEl._pieClickBound = true;
+    pieWrapEl.addEventListener('click', function(e) {
+      var pathEl = e.target.closest && e.target.closest('.pie-segment');
+      if (!pathEl) return;
+      var t = pathEl.getAttribute('data-type');
+      state.filterRiskType = state.filterRiskType === t ? '' : t;
+      render();
+    });
+  }
+
+  updateFilters();
+  render();
+})();
+  </script>
+</body>
+</html>
